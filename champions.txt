@@ -1,0 +1,14 @@
+from riotwatcher import LolWatcher, ApiError
+import json
+import pyautogui
+from python_imagesearch.imagesearch import imagesearch_loop, imagesearch
+
+api_key = 'RGAPI-d22c50c4-76c7-4587-9f55-56571b5e9626'
+watcher = LolWatcher(api_key)
+summoner = watcher.summoner
+version = watcher.data_dragon.versions_for_region('euw1')
+champions_version = version['n']['champion']
+
+champions = watcher.data_dragon.champions(champions_version)
+
+print(json.dumps(champions["data"]["Aatrox"], sort_keys=True, indent=4))
