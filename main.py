@@ -12,7 +12,7 @@ TIMELAPSE = 1
 
 inGame = False
 
-api_key = 'RGAPI-2c00a699-339c-4bae-8ec8-1cb149819b53'
+api_key = ''
 watcher = LolWatcher(api_key)
 
 acceptButtonImg = './pics/accept.jpg'
