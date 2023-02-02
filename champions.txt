@@ -3,7 +3,7 @@ import json
 import pyautogui
 from python_imagesearch.imagesearch import imagesearch_loop, imagesearch
 
-api_key = 'RGAPI-d22c50c4-76c7-4587-9f55-56571b5e9626'
+api_key = ''
 watcher = LolWatcher(api_key)
 summoner = watcher.summoner
 version = watcher.data_dragon.versions_for_region('euw1')
