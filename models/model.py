@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 
-from dotenv import  load_dotenv
+from dotenv import load_dotenv
 import requests
 import json
 from rich.console import Console
@@ -9,6 +9,7 @@ from rich.console import Console
 class Api_Requests:
     def __init__(self):
         self.api_key = self.__load_api_key()
+        self.region = ""
 
 
     def __load_api_key(self):
@@ -33,12 +34,15 @@ class Api_Requests:
 
         response = self.__response_manager(url)
 
+        # TODO: no sé si esto deberia estar en otro método (linea40-linea43) porque para sacar los "User"
+        # en "Team__set_players()" necesito usar los puuid de cada jugador.
+
         url_region = ("https://" + region.lower() + ".api.riotgames.com/riot/account/v1/region/by-game/lol/by-puuid/" +
                   response["puuid"] + "?api_key=" + self.api_key)
 
-        region_response = self.__response_manager(url_region)["region"]
+        region_response = self.__response_manager(url_region)
 
-        url_additional_data = ("https://" + region.lower() + ".api.riotgames.com//lol/summoner/v4/summoners/by-puuid/" +
+        url_additional_data = ("https://" + region_response["region"].lower() + ".api.riotgames.com/lol/summoner/v4/summoners/by-puuid/" +
                   response["puuid"] + "?api_key=" + self.api_key)
 
         additional_data_response = self.__response_manager(url_additional_data)
@@ -97,6 +101,28 @@ class Api_Requests:
 
         user.set_ranked_tiers(flexq_data, soloq_data)
 
+    def user_match_history(self, user):
+        # TODO: debería haber una relación NaN entre el jugador y las partidas.
+        # Cada jugador pertenece a N partidas, y en cada partida tienen que
+        # haber participado N jugadores
+
+        url = ("https://" + user.region + ".api.riotgames.com/lol/match/v5/matches/by-puuid/" + user.puuid +
+               "/ids?start=0&count=20?api_key=" + self.api_key)
+
+        match_ids_response = self.__response_manager(url)
+
+        for match_id in match_ids_response:
+            url = ("https://" + user.region + ".api.riotgames.com/lol/match/v5/matches/" + match_id +
+                   "/ids?start=0&count=20?api_key=" + self.api_key)
+
+            match_response = self.__response_manager(url)
+            # MatchManager(match_response) -> ¿puede ser buena idea una clase intermedia?
+
+            match_metadata = match_response["metadata"]
+
+            match = Match(match_metadata["matchId"], match_metadata["participants"])
+
+
 class User:
     def __init__(self, *args):
         self.region = args[0]
@@ -107,6 +133,7 @@ class User:
         self.icon = args[3]
         self.champion_pool = list()
         self.ranked_tiers = tuple()
+        self.in_games = list()
 
 
     def set_puuid(self, puuid):
@@ -120,21 +147,6 @@ class User:
 
     def set_ranked_tiers(self, soloq_data, flexq_data):
         self.ranked_tiers = (soloq_data, flexq_data)
-
-
-@dataclass
-class Champion:
-        version: str
-        id: str
-        name: str
-        title: str
-        description: str
-        info: str
-        image: str
-        tags: str
-        partype: str
-        stats: str
-        mastery_points: str
 
 
 @dataclass
@@ -159,3 +171,43 @@ class RankedTier:
             wins=data["wins"],
             losses=data["losses"]
         )
+
+
+@dataclass
+class Champion:
+        version: str
+        id: str
+        name: str
+        title: str
+        description: str
+        info: str
+        image: str
+        tags: str
+        partype: str
+        stats: str
+        mastery_points: str
+
+
+class Match:
+    def __init__(self, id, players):
+        self.id = id
+        self.teams = self.__set_team(players)
+
+
+    def __set_team(self, players):
+        blue_side = Team(players[5:], "blue_side")
+        red_side = Team(*players[:5], "red_side")
+
+        return {
+            "blue_side" : blue_side,
+            "red_side" : red_side
+        }
+
+
+class Team:
+    def __init__(self, players, team_side):
+        self.players = self.__set_players(players)
+        self.team_side = team_side
+
+    def __set_players(self, puuid):
+        return list(*Api_Requests.account_data_bypuuid())
